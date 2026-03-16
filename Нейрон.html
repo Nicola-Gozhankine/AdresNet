@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нейроны для пятилетки — интерактивная эмуляция</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f8ff;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+        .neuron-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 400px;
+            border: 3px solid #3498db;
+            transition: 0.3s;
+        }
+        .neuron-card.addressable {
+            border-color: #e67e22;
+        }
+        .neuron-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .neuron-title span {
+            background: #3498db;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .addressable .neuron-title span {
+            background: #e67e22;
+        }
+        .state-box {
+            background: #ecf0f1;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        .state-item {
+            text-align: center;
+            min-width: 80px;
+        }
+        .state-value {
+            font-size: 48px;
+            font-weight: bold;
+            background: white;
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-top: 5px;
+            border: 2px solid #bdc3c7;
+        }
+        .inbox-area {
+            background: #fef9e7;
+            border-left: 5px solid #f39c12;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        button {
+            background: #2ecc71;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background: #27ae60;
+            transform: scale(1.05);
+        }
+        button.reset {
+            background: #e74c3c;
+        }
+        button.reset:hover {
+            background: #c0392b;
+        }
+        .log {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .target-info {
+            background: #d5f5e3;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 5px solid #27ae60;
+        }
+        .addr-settings {
+            background: #f5eef8;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px dashed #8e44ad;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #aaa;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background: #d0e0f0;
+        }
+        select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #aaa;
+        }
+        .arrow {
+            font-size: 24px;
+            text-align: center;
+            margin: 5px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧠 Два друга-нейрона: Простой и Адресный</h1>
+    <p style="text-align: center;">Нажимай кнопки, смотри, как они общаются!</p>
+
+    <div class="container">
+        <!-- Простой нейрон -->
+        <div class="neuron-card" id="simpleNeuron">
+            <div class="neuron-title">
+                <span>ПРОСТОЙ</span> Нейрон Симпл
+            </div>
+            <div class="state-box">
+                <div class="state-item">
+                    <div>🤖 Состояние (s)</div>
+                    <div class="state-value" id="simple-state">0</div>
+                </div>
+                <div class="state-item">
+                    <div>📥 Входной буфер</div>
+                    <div class="state-value" id="simple-inbox">0</div>
+                </div>
+            </div>
+            <div class="target-info">
+                <div>🎯 У него два друга:</div>
+                <div><strong>target0</strong> = Нейрон А (когда выход y=0)</div>
+                <div><strong>target1</strong> = Нейрон Б (когда выход y=1)</div>
+            </div>
+            <div class="inbox-area">
+                <span>📨 Сигналы, которые пришли сейчас: </span>
+                <span id="simple-inbox-list">—</span>
+            </div>
+            <div class="action-buttons">
+                <button onclick="sendSignal('simple', 0)">📩 Принять 0</button>
+                <button onclick="sendSignal('simple', 1)">📩 Принять 1</button>
+                <button onclick="doStep('simple')">⏭️ Такт!</button>
+                <button class="reset" onclick="resetNeuron('simple')">🔄 Сброс</button>
+            </div>
+            <div class="log" id="simple-log">Лог: пока ничего</div>
+        </div>
+
+        <!-- Адресный нейрон -->
+        <div class="neuron-card addressable" id="addrNeuron">
+            <div class="neuron-title">
+                <span>АДРЕСНЫЙ</span> Нейрон Адри
+            </div>
+            <div class="state-box">
+                <div class="state-item">
+                    <div>🤖 Состояние (s)</div>
+                    <div class="state-value" id="addr-state">0</div>
+                </div>
+                <div class="state-item">
+                    <div>📥 Входной буфер</div>
+                    <div class="state-value" id="addr-inbox">0</div>
+                </div>
+            </div>
+
+            <!-- Адресные регистры и таблица действий (настраиваемая) -->
+            <div class="addr-settings">
+                <div style="font-weight:bold; margin-bottom:10px;">📋 Адресная книжка (4 адреса)</div>
+                <table>
+                    <tr><th>Индекс</th><th>Куда (delta, local)</th></tr>
+                    <tr><td>0</td><td><span id="addr0">+1, нейрон 0</span></td></tr>
+                    <tr><td>1</td><td><span id="addr1">+1, нейрон 1</span></td></tr>
+                    <tr><td>2</td><td><span id="addr2">0, нейрон 2</span></td></tr>
+                    <tr><td>3</td><td><span id="addr3">+2, нейрон 0</span></td></tr>
+                </table>
+                <div style="font-weight:bold; margin:15px 0 5px;">⚙️ Таблица действий</div>
+                <table>
+                    <tr><th>(s, x)</th><th>Действие</th></tr>
+                    <tr><td>(0,0)</td><td><select id="action00"><option value="ordinary">обычный</option><option value="addr0">адрес 0</option><option value="addr1">адрес 1</option><option value="addr2">адрес 2</option><option value="addr3">адрес 3</option></select></td></tr>
+                    <tr><td>(0,1)</td><td><select id="action01"><option value="ordinary">обычный</option><option value="addr0">адрес 0</option><option value="addr1">адрес 1</option><option value="addr2">адрес 2</option><option value="addr3">адрес 3</option></select></td></tr>
+                    <tr><td>(1,0)</td><td><select id="action10"><option value="ordinary">обычный</option><option value="addr0">адрес 0</option><option value="addr1">адрес 1</option><option value="addr2">адрес 2</option><option value="addr3">адрес 3</option></select></td></tr>
+                    <tr><td>(1,1)</td><td><select id="action11"><option value="ordinary">обычный</option><option value="addr0">адрес 0</option><option value="addr1">адрес 1</option><option value="addr2">адрес 2</option><option value="addr3">адрес 3</option></select></td></tr>
+                </table>
+                <div style="margin-top:10px;">
+                    <strong>fixed_targets:</strong> при обычном режиме: y=0 → Нейрон В, y=1 → Нейрон Г
+                </div>
+            </div>
+
+            <div class="inbox-area">
+                <span>📨 Сигналы сейчас: </span>
+                <span id="addr-inbox-list">—</span>
+            </div>
+
+            <div class="action-buttons">
+                <button onclick="sendSignal('addr', 0)">📩 Принять 0</button>
+                <button onclick="sendSignal('addr', 1)">📩 Принять 1</button>
+                <button onclick="doStep('addr')">⏭️ Такт!</button>
+                <button class="reset" onclick="resetNeuron('addr')">🔄 Сброс</button>
+            </div>
+            <div class="log" id="addr-log">Лог: пока ничего</div>
+        </div>
+    </div>
+
+    <script>
+        // Класс простого нейрона (только для эмуляции)
+        class SimpleNeuron {
+            constructor() {
+                this.state = 0;
+                this.inbox = null; // null означает "нет сигнала"
+                this.target0 = "Нейрон А";
+                this.target1 = "Нейрон Б";
+                this.logs = [];
+            }
+            receive(bit) {
+                if (this.inbox === null) this.inbox = bit;
+                else this.inbox = this.inbox | bit; // OR
+                this.addLog(`📥 Принял сигнал ${bit}, inbox теперь = ${this.inbox}`);
+            }
+            step() {
+                // Определяем входной бит x
+                let x = (this.inbox !== null) ? this.inbox : 0;
+                this.addLog(`🔢 Вход x = ${x} (из inbox)`);
+                let s_old = this.state;
+                // Вычисляем выход y
+                let y = (s_old === 0) ? x : 1 - x;
+                // Обновляем состояние
+                this.state = 1 - s_old;
+                // Выбираем цель
+                let target = (y === 0) ? this.target0 : this.target1;
+                // Сбрасываем inbox
+                this.inbox = null;
+                this.addLog(`⚙️ y = ${y}, состояние стало ${this.state}, цель = ${target}`);
+                return { y, target };
+            }
+            reset() {
+                this.state = 0;
+                this.inbox = null;
+                this.logs = [];
+            }
+            addLog(msg) {
+                this.logs.push(msg);
+                if (this.logs.length > 5) this.logs.shift();
+            }
+        }
+
+        // Класс адресного нейрона
+        class AddressableNeuron {
+            constructor() {
+                this.state = 0;
+                this.inbox = null;
+                // Фиксированные цели
+                this.fixed0 = "Нейрон В";
+                this.fixed1 = "Нейрон Г";
+                // Адресные регистры (условные)
+                this.addressList = [
+                    { delta: 1, local: 0, desc: "+1, нейрон 0" },
+                    { delta: 1, local: 1, desc: "+1, нейрон 1" },
+                    { delta: 0, local: 2, desc: "0, нейрон 2" },
+                    { delta: 2, local: 0, desc: "+2, нейрон 0" }
+                ];
+                // Таблица действий (заполняется из UI)
+                this.actionTable = {
+                    '0,0': 'ordinary',
+                    '0,1': 'ordinary',
+                    '1,0': 'ordinary',
+                    '1,1': 'ordinary'
+                };
+                this.logs = [];
+            }
+            // Метод для обновления таблицы из select-элементов
+            updateActionFromUI() {
+                this.actionTable['0,0'] = document.getElementById('action00').value;
+                this.actionTable['0,1'] = document.getElementById('action01').value;
+                this.actionTable['1,0'] = document.getElementById('action10').value;
+                this.actionTable['1,1'] = document.getElementById('action11').value;
+                this.addLog("📋 Таблица действий обновлена");
+            }
+            receive(bit) {
+                if (this.inbox === null) this.inbox = bit;
+                else this.inbox = this.inbox | bit;
+                this.addLog(`📥 Принял сигнал ${bit}, inbox = ${this.inbox}`);
+            }
+            step() {
+                // Обновляем таблицу из UI на всякий случай
+                this.updateActionFromUI();
+
+                let x = (this.inbox !== null) ? this.inbox : 0;
+                this.addLog(`🔢 Вход x = ${x}`);
+                let s_old = this.state;
+                let y = (s_old === 0) ? x : 1 - x;
+                let newState = 1 - s_old;
+                this.state = newState;
+
+                // Определяем действие по таблице
+                let key = s_old + ',' + x;
+                let action = this.actionTable[key] || 'ordinary';
+                this.addLog(`📋 По таблице (s=${s_old}, x=${x}) → действие: ${action}`);
+
+                let target;
+                if (action === 'ordinary') {
+                    target = (y === 0) ? this.fixed0 : this.fixed1;
+                    this.addLog(`🎯 Обычный режим: y=${y} → цель ${target}`);
+                } else {
+                    // action вида 'addr0', 'addr1', ...
+                    let idx = parseInt(action.replace('addr',''));
+                    let addr = this.addressList[idx];
+                    // Здесь мы не вычисляем реальный слой, просто показываем описание
+                    target = `по адресу ${idx} (${addr.desc})`;
+                    this.addLog(`🎯 Адресный режим: берём адрес ${idx} → ${addr.desc}`);
+                }
+
+                // Сбрасываем inbox
+                this.inbox = null;
+                return { y, target };
+            }
+            reset() {
+                this.state = 0;
+                this.inbox = null;
+                this.logs = [];
+            }
+            addLog(msg) {
+                this.logs.push(msg);
+                if (this.logs.length > 5) this.logs.shift();
+            }
+        }
+
+        // Создаём экземпляры нейронов
+        const simple = new SimpleNeuron();
+        const addr = new AddressableNeuron();
+
+        // Вспомогательные функции обновления UI
+        function updateSimpleUI() {
+            document.getElementById('simple-state').innerText = simple.state;
+            document.getElementById('simple-inbox').innerText = (simple.inbox !== null) ? simple.inbox : '—';
+            let list = (simple.inbox !== null) ? simple.inbox : 'нет';
+            document.getElementById('simple-inbox-list').innerText = list;
+            let logDiv = document.getElementById('simple-log');
+            logDiv.innerHTML = '📋 ' + simple.logs.slice().reverse().join('<br>📋 ');
+        }
+
+        function updateAddrUI() {
+            document.getElementById('addr-state').innerText = addr.state;
+            document.getElementById('addr-inbox').innerText = (addr.inbox !== null) ? addr.inbox : '—';
+            let list = (addr.inbox !== null) ? addr.inbox : 'нет';
+            document.getElementById('addr-inbox-list').innerText = list;
+            let logDiv = document.getElementById('addr-log');
+            logDiv.innerHTML = '📋 ' + addr.logs.slice().reverse().join('<br>📋 ');
+            // Обновляем отображение адресных регистров (для наглядности)
+            document.getElementById('addr0').innerText = addr.addressList[0].desc;
+            document.getElementById('addr1').innerText = addr.addressList[1].desc;
+            document.getElementById('addr2').innerText = addr.addressList[2].desc;
+            document.getElementById('addr3').innerText = addr.addressList[3].desc;
+        }
+
+        // Обработчики кнопок
+        function sendSignal(neuronType, bit) {
+            if (neuronType === 'simple') {
+                simple.receive(bit);
+                updateSimpleUI();
+            } else {
+                addr.receive(bit);
+                updateAddrUI();
+            }
+        }
+
+        function doStep(neuronType) {
+            if (neuronType === 'simple') {
+                let result = simple.step();
+                simple.addLog(`✅ Результат: y=${result.y}, отправил → ${result.target}`);
+                updateSimpleUI();
+            } else {
+                // Для адресного сначала можно принудительно обновить таблицу из UI
+                addr.updateActionFromUI();
+                let result = addr.step();
+                addr.addLog(`✅ Результат: y=${result.y}, отправил → ${result.target}`);
+                updateAddrUI();
+            }
+        }
+
+        function resetNeuron(neuronType) {
+            if (neuronType === 'simple') {
+                simple.reset();
+                updateSimpleUI();
+            } else {
+                addr.reset();
+                updateAddrUI();
+            }
+        }
+
+        // Инициализация
+        window.onload = function() {
+            // Установим начальные значения в select для адресного нейрона (пример)
+            document.getElementById('action00').value = 'ordinary';
+            document.getElementById('action01').value = 'addr1';  // например, при (0,1) шлём по адресу 1
+            document.getElementById('action10').value = 'addr0';
+            document.getElementById('action11').value = 'ordinary';
+            addr.updateActionFromUI();
+            updateSimpleUI();
+            updateAddrUI();
+        };
+    </script>
+</body>
+</html>
